@@ -52,6 +52,26 @@ public:
     QGroundControlQmlGlobal(QGCApplication* app, QGCToolbox* toolbox);
     ~QGroundControlQmlGlobal();
 
+    /**
+     * Additions by Aaron Marcus for MouseHUD
+     */
+    enum MouseHUDMode {
+        GPS_Position,
+        State2,
+        State3,
+        State4
+    };
+    Q_ENUM(MouseHUDMode)
+    Q_PROPERTY(MouseHUDMode mouseHUDMode READ mouseHUDMode WRITE setMouseHUDMode NOTIFY mouseHUDModeChanged )
+    //**Accessors
+    MouseHUDMode    mouseHUDMode(void) const {return _mouseHUDMode;}
+    void setMouseHUDMode(QGroundControlQmlGlobal::MouseHUDMode mouseHUDMode);
+
+    //**Functions
+    Q_INVOKABLE void advanceMouseHUDMode();
+
+    //******* End Additions by Aaron Marcus for MouseHUD **********
+
     enum AltitudeMode {
         AltitudeModeNone,           // Being used as distance value unrelated to ground (for example distance to structure)
         AltitudeModeRelative,       // MAV_FRAME_GLOBAL_RELATIVE_ALT
@@ -263,6 +283,10 @@ signals:
     void flightMapZoomChanged           (double flightMapZoom);
     void skipSetupPageChanged           ();
 
+    //****Added for MouseHUD****
+    void mouseHUDModeChanged            (QGroundControlQmlGlobal::MouseHUDMode mode);
+    //**************************
+
 private:
     double                  _flightMapInitialZoom   = 17.0;
     LinkManager*            _linkManager            = nullptr;
@@ -293,6 +317,10 @@ private:
 
     static QGeoCoordinate   _coord;
     static double           _zoom;
+
+    //*****MouseHUD******
+    QGroundControlQmlGlobal::MouseHUDMode       _mouseHUDMode;
+    //*******************
 };
 
 #endif

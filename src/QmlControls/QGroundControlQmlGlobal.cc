@@ -29,6 +29,7 @@ double           QGroundControlQmlGlobal::_zoom = 2;
 
 QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool               (app, toolbox)
+    , _mouseHUDMode         (QGroundControlQmlGlobal::GPS_Position) //*****MouseHUD*****
 {
     // We clear the parent on this object since we run into shutdown problems caused by hybrid qml app. Instead we let it leak on shutdown.
     setParent(nullptr);
@@ -260,3 +261,35 @@ QString QGroundControlQmlGlobal::qgcVersion(void) const
 #endif
     return versionStr;
 }
+
+//*****************MouseHUD*********************
+void QGroundControlQmlGlobal::setMouseHUDMode(QGroundControlQmlGlobal::MouseHUDMode mode)
+{
+    if(mode != _mouseHUDMode) {
+        _mouseHUDMode = mode;
+        emit mouseHUDModeChanged(_mouseHUDMode);
+    }
+
+}
+
+void QGroundControlQmlGlobal::advanceMouseHUDMode()
+{
+    switch(_mouseHUDMode)
+    {
+        case QGroundControlQmlGlobal::GPS_Position:
+            _mouseHUDMode = QGroundControlQmlGlobal::State2;
+            break;
+        case QGroundControlQmlGlobal::State2:
+            _mouseHUDMode = QGroundControlQmlGlobal::State3;
+            break;
+        case QGroundControlQmlGlobal::State3:
+            _mouseHUDMode = QGroundControlQmlGlobal::State4;
+            break;
+        case QGroundControlQmlGlobal::State4:
+            _mouseHUDMode = QGroundControlQmlGlobal::GPS_Position;
+            break;
+    }
+}
+
+
+//**********************************************

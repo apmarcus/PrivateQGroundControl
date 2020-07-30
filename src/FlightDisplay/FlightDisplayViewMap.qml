@@ -56,6 +56,14 @@ FlightMap {
     property bool   _keepVehicleCentered:       mainIsMap ? false : true
     property bool   _pipping:                   false
 
+
+    /**
+      Properties introduced by Aaron Marcus to facilitate 'Mouse HUD'
+      */
+
+    //property int   _rightClickState:            0
+
+    //***** End properties added by Aaron Marcus *******
     function updateAirspace(reset) {
         if(_airspaceEnabled) {
             var coordinateNW = flightMap.toCoordinate(Qt.point(0,0), false /* clipToViewPort */)
@@ -491,9 +499,26 @@ FlightMap {
         }
     }
 
+    MapQuickItem {
+        id:             mouseHUD
+        anchorPoint.x:  -10
+        anchorPoint.y:  sourceItem.height.toString()
+        visible:        false
+        //Coordinate is to be set by the mouse handler.
+
+        sourceItem:     QGCLabel {
+            text:      "Error: No Update Being Pushed"
+        }
+    }
+
     // Handle guided mode clicks
     MouseArea {
         anchors.fill: parent
+
+        //** Modification from Aaron Marcus to enable GPS tracking mouse UI & Right Clicks
+        acceptedButtons:    Qt.LeftButton | Qt.RightButton
+        hoverEnabled: true
+        //***
 
         QGCMenu {
             id: clickMenu
@@ -527,6 +552,27 @@ FlightMap {
             }
         }
 
+        /**
+          Handlers for mouseHUD by Aaron Marcus
+          */
+        onPositionChanged: {
+            var mouseLoc = flightMap.toCoordinate(Qt.point(mouse.x, mouse.y), false)
+            mouseHUD.coordinate = mouseLoc
+            if(QGroundControl.mouseHUDMode == QGroundControl.GPS_Position)
+            {
+                mouseHUD.sourceItem.text = "Latitude: " + mouseLoc.latitude.toString() + "\nLongitude: " + mouseLoc.longitude.toString()
+            }
+        }
+
+        onDoubleClicked: {
+            if(mouse.button == Qt.LeftButton)
+            {
+                mouseHUD.visible = !mouseHUD.visible
+            }
+        }
+
+        //********** End Modifications by Aaron Marcus ********
+
         onClicked: {
             if (!guidedActionsController.guidedUIVisible && (guidedActionsController.showGotoLocation || guidedActionsController.showOrbit || guidedActionsController.showROI)) {
                 orbitMapCircle.hide()
@@ -535,6 +581,30 @@ FlightMap {
                 clickMenu.coord = clickCoord
                 clickMenu.popup()
             }
+
+            //****Modification by Aaron Marcus for mouseHUD *****
+            if(mouse.button === Qt.RightButton)
+            {
+                QGroundControl.advanceMouseHUDMode()
+                switch(QGroundControl.mouseHUDMode)
+                {
+                    case QGroundControl.GPS_Position:
+                        var mouseLoc = flightMap.toCoordinate(Qt.point(mouse.x, mouse.y), false)
+                        mouseHUD.coordinate = mouseLoc
+                        mouseHUD.sourceItem.text = "Latitude: " + mouseLoc.latitude.toString() + "\nLongitude: " + mouseLoc.longitude.toString()
+                        break;
+                    case QGroundControl.State2:
+                        mouseHUD.sourceItem.text = "Second State"
+                        break;
+                    case QGroundControl.State3:
+                        mouseHUD.sourceItem.text = "Third State"
+                        break;
+                    case QGroundControl.State4:
+                        mouseHUD.sourceItem.text = "Fourth State"
+                        break;
+                }
+            }
+            //***End of Modification by Aaron Marcus****
         }
     }
 
