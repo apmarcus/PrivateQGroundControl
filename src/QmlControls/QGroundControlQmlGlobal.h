@@ -56,10 +56,10 @@ public:
      * Additions by Aaron Marcus for MouseHUD
      */
     enum MouseHUDMode {
-        GPS_Position,
-        State2,
-        State3,
-        State4
+        Mouse_GPS_Position,
+        GCS_GPS_Position,
+        FlightMapCenter,
+        FlightMapZoom
     };
     Q_ENUM(MouseHUDMode)
     Q_PROPERTY(MouseHUDMode mouseHUDMode READ mouseHUDMode WRITE setMouseHUDMode NOTIFY mouseHUDModeChanged )
@@ -318,7 +318,7 @@ private:
     static QGeoCoordinate   _coord;
     static double           _zoom;
 
-    //*****MouseHUD******
+    //*****Added for MouseHUD******
     QGroundControlQmlGlobal::MouseHUDMode       _mouseHUDMode;
     //*******************
 };

@@ -29,7 +29,7 @@ double           QGroundControlQmlGlobal::_zoom = 2;
 
 QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool               (app, toolbox)
-    , _mouseHUDMode         (QGroundControlQmlGlobal::GPS_Position) //*****MouseHUD*****
+    , _mouseHUDMode         (QGroundControlQmlGlobal::Mouse_GPS_Position) //*****MouseHUD*****
 {
     // We clear the parent on this object since we run into shutdown problems caused by hybrid qml app. Instead we let it leak on shutdown.
     setParent(nullptr);
@@ -276,20 +276,18 @@ void QGroundControlQmlGlobal::advanceMouseHUDMode()
 {
     switch(_mouseHUDMode)
     {
-        case QGroundControlQmlGlobal::GPS_Position:
-            _mouseHUDMode = QGroundControlQmlGlobal::State2;
+        case QGroundControlQmlGlobal::Mouse_GPS_Position:
+            setMouseHUDMode(QGroundControlQmlGlobal::GCS_GPS_Position);
             break;
-        case QGroundControlQmlGlobal::State2:
-            _mouseHUDMode = QGroundControlQmlGlobal::State3;
+        case QGroundControlQmlGlobal::GCS_GPS_Position:
+            setMouseHUDMode(QGroundControlQmlGlobal::FlightMapCenter);
             break;
-        case QGroundControlQmlGlobal::State3:
-            _mouseHUDMode = QGroundControlQmlGlobal::State4;
+        case QGroundControlQmlGlobal::FlightMapCenter:
+            setMouseHUDMode(QGroundControlQmlGlobal::FlightMapZoom);
             break;
-        case QGroundControlQmlGlobal::State4:
-            _mouseHUDMode = QGroundControlQmlGlobal::GPS_Position;
+        case QGroundControlQmlGlobal::FlightMapZoom:
+            setMouseHUDMode(QGroundControlQmlGlobal::Mouse_GPS_Position);
             break;
     }
 }
-
-
 //**********************************************

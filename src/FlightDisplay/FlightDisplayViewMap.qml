@@ -56,14 +56,6 @@ FlightMap {
     property bool   _keepVehicleCentered:       mainIsMap ? false : true
     property bool   _pipping:                   false
 
-
-    /**
-      Properties introduced by Aaron Marcus to facilitate 'Mouse HUD'
-      */
-
-    //property int   _rightClickState:            0
-
-    //***** End properties added by Aaron Marcus *******
     function updateAirspace(reset) {
         if(_airspaceEnabled) {
             var coordinateNW = flightMap.toCoordinate(Qt.point(0,0), false /* clipToViewPort */)
@@ -511,11 +503,97 @@ FlightMap {
         }
     }
 
+
+    /**
+      Handlers for mouseHUD by Aaron Marcus
+      */
+    Connections {
+        target: QGroundControl
+        ignoreUnknownSignals: false
+
+        //Update Flight Map Center Coordinates if we are in that mode
+        onFlightMapPositionChanged: {
+            if(QGroundControl.mouseHUDMode === QGroundControl.FlightMapCenter)
+            {
+                mouseHUD.sourceItem.text = "Flight Map Center Coordinates" +
+                "\nLat: " + QGroundControl.flightMapPosition.latitude +
+                "\nLon: " + QGroundControl.flightMapPosition.longitude
+            }
+        }
+
+        //Update Flight Map Zoom level if we are in that mode
+        onFlightMapZoomChanged: {
+            if(QGroundControl.mouseHUDMode === QGroundControl.FlightMapZoom)
+            {
+                mouseHUD.sourceItem.text = "Flight Map Zoom Level: " + QGroundControl.flightMapZoom
+            }
+        }
+
+        //Initial mode switch GUI fill in, before the acitvity driven updates
+        //take over mainly for a less jagged UI experience (for instance
+        //if you change mode without changing the zoom level, the onFlightMapZoomChanged
+        //won't fire, and you will see no indication of the mode alteration even though
+        //it has changed.
+        onMouseHUDModeChanged: {
+            switch(mode)
+            {
+                case QGroundControl.Mouse_GPS_Position:
+                    //No need for handling this case here.  Handled in the Mouse handler 'onClicked' due to needing the mouse location
+                    break;
+                case QGroundControl.GCS_GPS_Position:
+                    if(QGroundControl.qgcPositionManger.gcsPosition.isValid)
+                    {
+                        mouseHUD.sourceItem.text = "GCS Location "
+                                + "\nLat: " + positionManager.gcsPosition.latitude
+                                + "\nLon: " + positionManager.gcsPosition.longitude
+                    }
+                    else
+                    {
+                        mouseHUD.sourceItem.text = "GCS Position Currently Invalid"
+                    }
+                    break;
+                case QGroundControl.FlightMapCenter:
+                    mouseHUD.sourceItem.text = "Flight Map Center Coordinates" +
+                            "\nLat: " + QGroundControl.flightMapPosition.latitude +
+                            "\nLon: " + QGroundControl.flightMapPosition.longitude
+                    break;
+                case QGroundControl.FlightMapZoom:
+                    mouseHUD.sourceItem.text = "Flight Map Zoom Level: " + QGroundControl.flightMapZoom
+                    break;
+            }
+        }
+    }
+
+    Connections {
+        target: QGroundControl.qgcPositionManger
+        ignoreUnknownSignals: false
+
+        onGcsPositionChanged: {
+             if(QGroundControl.mouseHUDMode === QGroundControl.GCS_GPS_Position)
+             {
+                 //We could handle this in the onPositionChanged Mouse handler, but since we are tracking
+                 //the gcsPosition parameter, it is better handled inside the appropriate handler instead.
+                 if(QGroundControl.qgcPositionManger.gcsPosition.isValid)
+                 {
+                    mouseHUD.sourceItem.text = "GCS Location "
+                        + "\nLat: " + positionManager.gcsPosition.latitude
+                        + "\nLon: " + positionManager.gcsPosition.longitude
+                 }
+                 else
+                 {
+                    mouseHUD.sourceItem.text = "GCS Position Currently Invalid"
+                 }
+             }
+        }
+    }
+    //********** End Modifications by Aaron Marcus ********
+
+
     // Handle guided mode clicks
     MouseArea {
         anchors.fill: parent
 
-        //** Modification from Aaron Marcus to enable GPS tracking mouse UI & Right Clicks
+        //** Modification from Aaron Marcus to enable mouseHUD GPS Cursor functionality & Right Clicks
         acceptedButtons:    Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
         //***
@@ -556,14 +634,20 @@ FlightMap {
           Handlers for mouseHUD by Aaron Marcus
           */
         onPositionChanged: {
+            //Keep the mouseHUD attached to the mouse, needs to always
+            //update with mouse movement, regardless of content of mouseHUD
             var mouseLoc = flightMap.toCoordinate(Qt.point(mouse.x, mouse.y), false)
             mouseHUD.coordinate = mouseLoc
-            if(QGroundControl.mouseHUDMode == QGroundControl.GPS_Position)
+
+            if(QGroundControl.mouseHUDMode === QGroundControl.Mouse_GPS_Position)
             {
-                mouseHUD.sourceItem.text = "Latitude: " + mouseLoc.latitude.toString() + "\nLongitude: " + mouseLoc.longitude.toString()
+                //Always update if we are in cursor GPS mode
+                mouseHUD.sourceItem.text = "Cursor Location" +
+                        "\nLatitude: " + mouseLoc.latitude + "\nLongitude: " + mouseLoc.longitude.toString()
             }
         }
 
+        //Toggle visibility of mouseHUD by double left-clicking.
         onDoubleClicked: {
             if(mouse.button == Qt.LeftButton)
             {
@@ -574,38 +658,39 @@ FlightMap {
         //********** End Modifications by Aaron Marcus ********
 
         onClicked: {
-            if (!guidedActionsController.guidedUIVisible && (guidedActionsController.showGotoLocation || guidedActionsController.showOrbit || guidedActionsController.showROI)) {
-                orbitMapCircle.hide()
-                gotoLocationItem.hide()
-                var clickCoord = flightMap.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */)
-                clickMenu.coord = clickCoord
-                clickMenu.popup()
+            if(mouse.button === Qt.LeftButton) {
+                if (!guidedActionsController.guidedUIVisible && (guidedActionsController.showGotoLocation || guidedActionsController.showOrbit || guidedActionsController.showROI)) {
+                    orbitMapCircle.hide()
+                    gotoLocationItem.hide()
+                    var clickCoord = flightMap.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */)
+                    clickMenu.coord = clickCoord
+                    clickMenu.popup()
+                }
             }
-
             //****Modification by Aaron Marcus for mouseHUD *****
             if(mouse.button === Qt.RightButton)
             {
                 QGroundControl.advanceMouseHUDMode()
-                switch(QGroundControl.mouseHUDMode)
+                /**
+                  SPECIAL CASE
+                  Normally you should handle this case in the 'onMouseHUDChanged' signal handler, but we need the mouse location for this particular piece of functionality,
+                  where you change into Mouse_GPS_Position mode without the mouse moving.  If we left this handler in the onMouseHUDChanged mode, we wouldn't be able to get
+                  the mouse location without adding a decent amount of code and signaling to pull the mouse location over from the C++ side (Mouse location seems to be
+                  inaccessible from outside of Mouse events in QML), so for the sake of simplicity, this one event is handled differently from the other mouseHUD modes for
+                  the 'onMouseHUDChanged' signal situation.
+                  */
+                if(QGroundControl.mouseHUDMode === QGroundControl.Mouse_GPS_Position)
                 {
-                    case QGroundControl.GPS_Position:
-                        var mouseLoc = flightMap.toCoordinate(Qt.point(mouse.x, mouse.y), false)
-                        mouseHUD.coordinate = mouseLoc
-                        mouseHUD.sourceItem.text = "Latitude: " + mouseLoc.latitude.toString() + "\nLongitude: " + mouseLoc.longitude.toString()
-                        break;
-                    case QGroundControl.State2:
-                        mouseHUD.sourceItem.text = "Second State"
-                        break;
-                    case QGroundControl.State3:
-                        mouseHUD.sourceItem.text = "Third State"
-                        break;
-                    case QGroundControl.State4:
-                        mouseHUD.sourceItem.text = "Fourth State"
-                        break;
+                    var mouseLoc = flightMap.toCoordinate(Qt.point(mouse.x, mouse.y), false)
+                                            mouseHUD.coordinate = mouseLoc
+                                            mouseHUD.sourceItem.text = "Cursor Location" +
+                                                    "\nLatitude: " + mouseLoc.latitude + "\nLongitude: " + mouseLoc.longitude
                 }
             }
-            //***End of Modification by Aaron Marcus****
+            //********** End Modifications by Aaron Marcus ********
         }
+
+
     }
 
     MapScale {
